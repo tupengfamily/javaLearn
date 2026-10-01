@@ -1,67 +1,45 @@
-/**
- * 用户 API
- * <p>
- * 所有与后端 user 相关的请求都在这里集中管理。
- * 后端地址: http://localhost:8080 (由 Vite 代理转发)
- */
 import request from '../utils/request'
 
-// GET /api/users - 查询所有
-export function listAllUsers() {
-  return request({
-    url: '/users',
-    method: 'get'
-  })
-}
+// GET /api/users/page
+export const pageUsers = (params) =>
+  request({ url: '/users/page', method: 'get', params })
 
-// GET /api/users/{id} - 按 ID 查询
-export function getUserById(id) {
-  return request({
-    url: `/users/${id}`,
-    method: 'get'
-  })
-}
+// GET /api/users/{id}
+export const getUserById = (id) =>
+  request({ url: `/users/${id}`, method: 'get' })
 
-// POST /api/users - 创建
-export function createUser(data) {
-  return request({
-    url: '/users',
-    method: 'post',
-    data
-  })
-}
+// GET /api/users
+export const listAllUsers = () =>
+  request({ url: '/users', method: 'get' })
 
-// PUT /api/users/{id} - 更新
-export function updateUser(id, data) {
-  return request({
-    url: `/users/${id}`,
-    method: 'put',
-    data
-  })
-}
+// POST /api/users
+export const createUser = (data) =>
+  request({ url: '/users', method: 'post', data })
 
-// DELETE /api/users/{id} - 删除
-export function deleteUser(id) {
-  return request({
-    url: `/users/${id}`,
-    method: 'delete'
-  })
-}
+// PUT /api/users/{id}
+export const updateUser = (id, data) =>
+  request({ url: `/users/${id}`, method: 'put', data })
 
-// GET /api/users/search?keyword=xxx - 模糊查询
-export function searchUsers(keyword) {
-  return request({
-    url: '/users/search',
-    method: 'get',
-    params: { keyword }
-  })
-}
+// PUT /api/users/{id}/status
+export const updateStatus = (id, status) =>
+  request({ url: `/users/${id}/status`, method: 'put', data: { status } })
 
-// GET /api/users/age?min=&max= - 按年龄范围
-export function findByAgeRange(min, max) {
-  return request({
-    url: '/users/age',
-    method: 'get',
-    params: { min, max }
-  })
-}
+// PUT /api/users/{id}/password
+export const changePassword = (id, data) =>
+  request({ url: `/users/${id}/password`, method: 'put', data })
+
+// PUT /api/users/{id}/roles
+export const assignRoles = (id, roleCodes) =>
+  request({ url: `/users/${id}/roles`, method: 'put', data: { roleCodes } })
+
+// DELETE /api/users/{id}
+export const deleteUser = (id) =>
+  request({ url: `/users/${id}`, method: 'delete' })
+
+// GET /api/users/search?keyword=
+export const searchUsers = (keyword) =>
+  request({ url: '/users/search', method: 'get', params: { keyword } })
+
+// GET /api/users/age?min=&max=
+export const findByAgeRange = (min, max) =>
+  request({ url: '/users/age', method: 'get', params: { min, max } })

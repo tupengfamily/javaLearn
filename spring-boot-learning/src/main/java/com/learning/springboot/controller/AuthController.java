@@ -1,0 +1,70 @@
+package com.learning.springboot.controller;
+
+import com.learning.springboot.annotation.OperationLog;
+import com.learning.springboot.common.Result;
+import com.learning.springboot.dto.LoginRequest;
+import com.learning.springboot.dto.LoginResponse;
+import com.learning.springboot.dto.RegisterRequest;
+import com.learning.springboot.exception.BusinessException;
+import com.learning.springboot.security.CurrentUser;
+import com.learning.springboot.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 认证控制器: 注册、登录、获取当前用户、登出
+ * <p>
+ * 路径前缀 /api/auth,免鉴权(JwtAuthFilter 已排除)
+ */
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    @Autowired private AuthService authService;
+
+    @PostMapping("/login")
+    @OperationLog(module = "认证", action = "登录", recordParams = false)
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req, HttpServletRequest httpReq) {
+        String ip = clientIp(httpReq);
+        LoginResponse data = authService.login(req, ip);
+        return Result.ok("登录成功", data);
+    }
+
+    @PostMapping("/register")
+    @OperationLog(module = "认证", action = "注册", recordParams = false)
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest req, HttpServletRequest httpReq) {
+        String ip = clientIp(httpReq);
+        LoginResponse data = authService.register(req, ip);
+        return Result.created("注册成功", data);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> me(@CurrentUser Long userId) {
+        if (userId == null) throw new BusinessException(401, "未登录");
+        return Result.ok(authService.me(userId));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        // 无状态: 服务端不持有 session,前端清除 token 即可
+        return Result.ok("已登出", null);
+    }
+
+    private String clientIp(HttpServletRequest req) {
+        String ip = req.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = req.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty()) {
+            ip = req.getRemoteAddr();
+        }
+        return ip == null ? "" : ip.split(",")[0].trim();
+    }
+}

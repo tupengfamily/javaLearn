@@ -88,3 +88,10 @@ echo -e "${GREEN}============================================${NC}"
 echo -e "${GREEN}  ✓ 所有服务已停止${NC}"
 echo -e "${GREEN}============================================${NC}"
 echo ""
+
+# --clean 选项:同时清理 SQLite WAL/SHM 日志
+if [ "$1" = "--clean" ]; then
+    warn "清理 SQLite 临时文件..."
+    rm -f "$SCRIPT_DIR/spring-boot-learning/data/"*-wal "$SCRIPT_DIR/spring-boot-learning/data/"*-shm "$SCRIPT_DIR/spring-boot-learning/data/"*-journal 2>/dev/null
+    success "SQLite 临时文件已清理"
+fi

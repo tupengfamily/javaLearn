@@ -1,52 +1,40 @@
 package com.learning.springboot.service;
 
-import com.learning.springboot.dto.UserDTO;
+import com.learning.springboot.dto.ChangePasswordRequest;
+import com.learning.springboot.dto.PageResult;
+import com.learning.springboot.dto.UserVO;
 import com.learning.springboot.entity.User;
 
 import java.util.List;
+import java.util.Set;
 
 /**
- * 用户 Service 接口
- * <p>
- * 为什么要面向接口编程:
- * 1. 解耦:Controller 不依赖具体实现
- * 2. 便于测试:可以用 Mock 替换真实实现
- * 3. 便于扩展:可以有不同的实现(如缓存实现)
+ * 用户服务接口
  */
 public interface UserService {
 
-    /**
-     * 创建用户
-     */
-    User createUser(UserDTO userDTO);
+    UserVO createUser(String username, String password, String email, Integer age, String address);
 
-    /**
-     * 更新用户
-     */
-    User updateUser(Long id, UserDTO userDTO);
+    UserVO updateUser(Long id, String email, Integer age, String address, Integer status);
 
-    /**
-     * 删除用户
-     */
     void deleteUser(Long id);
 
-    /**
-     * 按 ID 查询
-     */
-    User getById(Long id);
+    UserVO getById(Long id);
 
-    /**
-     * 查询所有
-     */
+    PageResult<UserVO> pageUsers(String keyword, Integer status, int page, int size);
+
+    /** 修改密码: 验证旧密码,设置新密码 */
+    void changePassword(Long userId, ChangePasswordRequest req);
+
+    /** 分配角色(覆盖式) */
+    void assignRoles(Long userId, Set<String> roleCodes);
+
+    /** 启用/禁用用户 */
+    void updateStatus(Long userId, Integer status);
+
     List<User> listAll();
 
-    /**
-     * 按用户名模糊查询
-     */
     List<User> searchByUsername(String keyword);
 
-    /**
-     * 按年龄范围查询
-     */
     List<User> findByAgeRange(Integer min, Integer max);
 }

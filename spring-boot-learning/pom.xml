@@ -19,13 +19,16 @@
     <packaging>jar</packaging>
 
     <name>Spring Boot Learning Project</name>
-    <description>Spring Boot 综合实战学习项目</description>
+    <description>Spring Boot 综合实战 - 后台管理系统</description>
 
     <properties>
         <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- JJWT 版本由 spring-boot-parent 统一管理,这里只是文档 -->
+        <jjwt.version>0.12.6</jjwt.version>
+        <sqlite-jdbc.version>3.46.0.0</sqlite-jdbc.version>
     </properties>
 
     <dependencies>
@@ -53,10 +56,42 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
-        <!-- H2 内存数据库(无需安装,适合学习) -->
+        <!-- SQLite 驱动: 文件型数据库,持久化到 ./data/admin.db -->
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>${sqlite-jdbc.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Hibernate 社区方言: 提供 SQLiteDialect -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-community-dialects</artifactId>
+        </dependency>
+
+        <!-- Spring Security Crypto: 提供 BCryptPasswordEncoder (不引入 spring-security 全家桶) -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
+        <!-- JWT: jjwt-api 是编译依赖,impl/jackson 是运行时 -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
 

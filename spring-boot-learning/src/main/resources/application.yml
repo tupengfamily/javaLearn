@@ -1,12 +1,15 @@
 # ===========================================
-# Spring Boot 应用配置
+# Spring Boot 管理系统 配置
 # ===========================================
 
 # 应用基本信息
 app:
-  name: Spring Boot 学习项目
-  version: 1.0.0
+  name: Spring Boot 管理系统
+  version: 2.0.0
   author: Java 学习者
+  cors:
+    # 允许的前端开发源
+    allowed-origins: http://localhost:5173
 
 # 服务端口
 server:
@@ -19,35 +22,46 @@ spring:
   application:
     name: spring-boot-learning
 
-  # ============== 数据源(H2 内存数据库) ==============
+  # ============== 数据源(SQLite 文件) ==============
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  # ============== H2 控制台 ==============
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: jdbc:sqlite:${user.dir}/data/admin.db
+    driver-class-name: org.sqlite.JDBC
+    username: ""
+    password: ""
+    hikari:
+      pool-name: AdminHikariPool
+      maximum-pool-size: 10      # SQLite 单写多读,不宜过大
+      minimum-idle: 2
+      idle-timeout: 30000
+      connection-timeout: 30000
+      max-lifetime: 1800000
 
   # ============== JPA 配置 ==============
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
     hibernate:
-      ddl-auto: create-drop    # 启动时建表,关闭时删除
+      ddl-auto: update          # 首次启动建表,后续启动保留数据
     show-sql: true              # 打印 SQL
-    defer-datasource-initialization: true  # 让 data.sql 在 JPA 建表后执行
+    open-in-view: false         # 关闭 OSIV,避免事务边界混淆
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          batch_size: 30
+        order_inserts: true
+        order_updates: true
 
   # ============== SQL 初始化 ==============
-  sql:
-    init:
-      mode: always
-      data-locations: classpath:data.sql
+# 注意: 种子数据由 AdminBootstrap (CommandLineRunner) 全权负责,
+# 这里不配置 sql.init,避免与 JPA 初始化竞争。
+
+# ============== JWT 配置 ==============
+jwt:
+  # Base64 编码的 HMAC-SHA256 密钥(>= 32 字节)
+  secret: "VGhpc0lzQVZlcnlMb25nU2VjcmV0Rm9yU3ByaW5nQm9vdERlbW9Pbmx5X0RvTm90VXNlSW5Qcm9kdWN0aW9u"
+  expiration-millis: 86400000   # 24 小时
+  header: Authorization
+  prefix: "Bearer "
 
 # 日志配置
 logging:

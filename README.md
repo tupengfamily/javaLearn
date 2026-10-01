@@ -1,16 +1,24 @@
-# Java 零基础学习项目 ☕
+# Java 全栈学习项目 ☕
 
-> 面向 **零基础学习者** 的 Java 核心知识学习项目,涵盖 Java 开发的所有核心内容。
+> Java 零基础学习 + Spring Boot 实战 + Vue 3 后台管理系统的**一体化学习项目**。
 
 ## 📋 项目简介
 
-这是一个系统化的 Java 学习项目,采用"知识点分章节"的方式组织代码,每个章节配有**详细注释的可运行示例**和**单元测试**。
+本项目由三大模块组成:
+- **`java-learning/`** (根模块) — Java 零基础到核心的 13 章系统学习。
+- **`spring-boot-learning/`** — Spring Boot 3.3 实战: **后台管理系统**(JWT 鉴权 + RBAC + 操作日志 + 数据字典 + Dashboard)。
+- **`frontend-learning/`** — Vue 3 + Element Plus + Pinia 后台前端。
 
-**技术栈:**
-- ☕ Java 21 (LTS 最新版本)
-- 📦 Maven (依赖管理与构建)
-- 🧪 JUnit 5 (单元测试)
-- 🎯 模块化教学(13 个章节)
+## 🚀 快速启动
+
+```bash
+./start-all.sh
+# 默认账号: admin / admin123 (ADMIN 角色)
+#           user  / user123  (USER 角色)
+# 浏览器: http://localhost:5173
+```
+
+详细文档见各子模块的 `README.md` 和 `docs/`。
 
 ## 🚀 快速开始
 

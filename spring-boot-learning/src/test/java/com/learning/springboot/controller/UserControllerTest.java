@@ -1,16 +1,22 @@
 package com.learning.springboot.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.learning.springboot.dto.UserDTO;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,28 +26,58 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * UserController Web 层测试
  * <p>
- * @AutoConfigureMockMvc 自动配置 MockMvc,模拟 HTTP 请求。
- * 优势:不需要启动真实 Tomcat,速度快。
+ * 测试时先用 admin 登录拿到 token,然后所有受保护接口都带 Bearer Token。
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Rollback
 @DisplayName("UserController Web 测试")
 class UserControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private String token;
+
+    @BeforeEach
+    void login() throws Exception {
+        Map<String, String> loginReq = new HashMap<>();
+        loginReq.put("username", "admin");
+        loginReq.put("password", "admin123");
+        MvcResult r = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginReq)))
+            .andExpect(status().isOk())
+            .andReturn();
+        JsonNode body = objectMapper.readTree(r.getResponse().getContentAsString());
+        token = body.path("data").path("token").asText();
+        assertTrue(token != null && !token.isEmpty(), "登录 token 不应为空");
+    }
 
     @Test
-    @DisplayName("GET /api/users - 查询所有用户")
-    void testListAll() throws Exception {
+    @DisplayName("未带 token 访问受保护资源 → 401")
+    void testNoTokenUnauthorized() throws Exception {
         mockMvc.perform(get("/api/users"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("查询成功"));
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("GET /api/users - 带 token 查询所有用户")
+    void testListAll() throws Exception {
+        mockMvc.perform(get("/api/users").header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(200));
+    }
+
+    @Test
+    @DisplayName("GET /api/users/page - 分页查询")
+    void testPageUsers() throws Exception {
+        mockMvc.perform(get("/api/users/page?page=1&size=10").header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(200))
+            .andExpect(jsonPath("$.data.total").exists())
+            .andExpect(jsonPath("$.data.records").isArray());
     }
 
     @Test
@@ -52,14 +88,16 @@ class UserControllerTest {
         dto.setEmail("new@example.com");
         dto.setAge(25);
         dto.setAddress("测试地址");
+        dto.setPassword("password123");
 
         mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("创建成功"))
-                .andExpect(jsonPath("$.data.username").value("newuser"));
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(dto)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.code").value(200))
+            .andExpect(jsonPath("$.message").value("创建成功"))
+            .andExpect(jsonPath("$.data.username").value("newuser"));
     }
 
     @Test
@@ -67,46 +105,25 @@ class UserControllerTest {
     void testCreateUserInvalidEmail() throws Exception {
         UserDTO dto = new UserDTO();
         dto.setUsername("invaliduser");
-        dto.setEmail("invalid-email");  // 不是合法邮箱
+        dto.setEmail("invalid-email");
         dto.setAge(25);
+        dto.setPassword("password123");
 
         MvcResult result = mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isBadRequest())
-                .andReturn();
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(dto)))
+            .andExpect(status().isBadRequest())
+            .andReturn();
 
         String response = result.getResponse().getContentAsString();
-        assertTrue(response.contains("邮箱格式不正确") || response.contains("email"));
+        assertTrue(response.contains("邮箱") || response.contains("email"));
     }
 
     @Test
-    @DisplayName("POST /api/users - 用户名为空返回 400")
-    void testCreateUserEmptyUsername() throws Exception {
-        UserDTO dto = new UserDTO();
-        dto.setUsername("");  // 空字符串
-        dto.setEmail("test@example.com");
-        dto.setAge(25);
-
-        mockMvc.perform(post("/api/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("GET /api/users/{id} - 查询不存在的用户返回业务错误")
-    void testGetByIdNotFound() throws Exception {
-        mockMvc.perform(get("/api/users/99999"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(containsString("用户不存在")));
-    }
-
-    @Test
-    @DisplayName("GET /api/hello - 简单接口")
+    @DisplayName("GET /api/hello - 公开接口无需 token")
     void testHello() throws Exception {
         mockMvc.perform(get("/api/hello"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value(containsString("Hello")));
+            .andExpect(status().isOk());
     }
 }

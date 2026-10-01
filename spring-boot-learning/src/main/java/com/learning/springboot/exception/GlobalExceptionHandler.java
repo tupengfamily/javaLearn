@@ -1,76 +1,84 @@
 package com.learning.springboot.exception;
 
-import org.springframework.http.HttpStatus;
+import com.learning.springboot.common.Result;
+import io.jsonwebtoken.JwtException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * 全局异常处理器
  * <p>
- * @RestControllerAdvice = @ControllerAdvice + @ResponseBody
- * 自动捕获 Controller 抛出的异常,统一返回 JSON 格式。
- * <p>
- * 优势:
- * - 不用在每个 Controller 写 try-catch
- * - 统一异常响应格式
+ * 把异常映射为统一的 {code, message, data, timestamp} 格式。
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * 处理业务异常
-     */
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /** 业务异常 */
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<Map<String, Object>> handleBusinessException(BusinessException e) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", e.getCode());
-        body.put("error", "Business Error");
-        body.put("message", e.getMessage());
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    public ResponseEntity<?> handleBusiness(BusinessException e) {
+        int code = e.getCode();
+        HttpStatusCode status = switch (code) {
+            case 401 -> HttpStatusCode.valueOf(401);
+            case 403 -> HttpStatusCode.valueOf(403);
+            case 404 -> HttpStatusCode.valueOf(404);
+            case 409 -> HttpStatusCode.valueOf(409);
+            default -> HttpStatusCode.valueOf(400);
+        };
+        log.warn("[Business] code={} msg={}", code, e.getMessage());
+        return Result.error(status, code, e.getMessage());
     }
 
-    /**
-     * 处理参数校验异常(@Valid 校验失败)
-     */
+    /** 参数校验失败 */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationException(
-            MethodArgumentNotValidException e) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", 400);
-        body.put("error", "Validation Failed");
-
-        // 收集所有字段错误
-        Map<String, String> fieldErrors = new HashMap<>();
-        for (FieldError error : e.getBindingResult().getFieldErrors()) {
-            fieldErrors.put(error.getField(), error.getDefaultMessage());
+    public ResponseEntity<?> handleValidation(MethodArgumentNotValidException e) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        for (FieldError fe : e.getBindingResult().getFieldErrors()) {
+            errors.put(fe.getField(), fe.getDefaultMessage());
         }
-        body.put("message", "参数校验失败");
-        body.put("fieldErrors", fieldErrors);
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+        return Result.badRequest("参数校验失败: " + errors);
     }
 
-    /**
-     * 处理其他未定义异常
-     */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleException(Exception e) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", 500);
-        body.put("error", "Internal Server Error");
-        body.put("message", "服务器内部错误: " + e.getMessage());
+    /** JWT 异常 */
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<?> handleJwt(JwtException e) {
+        log.warn("[JWT] {}", e.getMessage());
+        return Result.unauthorized("Token 无效或已过期");
+    }
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    /** 数据完整性冲突(唯一键 / 外键) */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrity(DataIntegrityViolationException e) {
+        log.warn("[DB] {}", e.getMostSpecificCause().getMessage());
+        String msg = e.getMostSpecificCause().getMessage();
+        if (msg != null && msg.contains("UNIQUE")) {
+            return Result.conflict("数据已存在,违反唯一约束");
+        }
+        return Result.conflict("数据完整性错误: " + msg);
+    }
+
+    /** 参数类型转换错误 */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<?> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        return Result.badRequest("参数类型错误: " + e.getName());
+    }
+
+    /** 兜底 */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleAll(Exception e) {
+        log.error("[ERROR] 未处理异常", e);
+        return Result.error(HttpStatusCode.valueOf(500), 500, "服务器内部错误: " + e.getMessage());
     }
 }

@@ -11,9 +11,12 @@ export default defineConfig({
     // 代理配置: 解决前端开发时的跨域问题
     // 浏览器访问 http://localhost:5173/api/users
     // 实际请求转发到 http://localhost:8080/api/users
+    // 优先用 BACKEND_PORT 环境变量,否则默认 8080
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.BACKEND_PORT
+          ? `http://localhost:${process.env.BACKEND_PORT}`
+          : 'http://localhost:8080',
         changeOrigin: true
       }
     }
