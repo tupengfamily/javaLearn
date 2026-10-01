@@ -1,0 +1,57 @@
+# ===========================================
+# Spring Boot 应用配置
+# ===========================================
+
+# 应用基本信息
+app:
+  name: Spring Boot 学习项目
+  version: 1.0.0
+  author: Java 学习者
+
+# 服务端口
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# Spring 配置
+spring:
+  application:
+    name: spring-boot-learning
+
+  # ============== 数据源(H2 内存数据库) ==============
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # ============== H2 控制台 ==============
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # ============== JPA 配置 ==============
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop    # 启动时建表,关闭时删除
+    show-sql: true              # 打印 SQL
+    defer-datasource-initialization: true  # 让 data.sql 在 JPA 建表后执行
+    properties:
+      hibernate:
+        format_sql: true
+
+  # ============== SQL 初始化 ==============
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data.sql
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.learning.springboot: DEBUG
+    org.hibernate.SQL: DEBUG
